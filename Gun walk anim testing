@@ -1,0 +1,223 @@
+local function GS(service)
+    return game:GetService(service)
+end
+local workspace = GS('Workspace')
+local camera = workspace.CurrentCamera
+local RS,HB,ST = GS('RunService').RenderStepped,GS('RunService').Heartbeat,GS('RunService').Stepped
+local plrs = GS('Players')
+
+local start_id = '6088618361'
+
+local plr,name = plrs.LocalPlayer,plrs.LocalPlayer.Name
+local backpack = plr.Backpack
+local char = plr.Character
+local tor,hrp,hum = char.Torso,char.HumanoidRootPart,char.Humanoid
+
+local lookvel,rightvel,side,side1
+
+local t_insert,t_remove,t_find = table.insert,table.remove,table.find
+local rad,round = math.rad,math.round
+
+local V3 = {n=Vector3.new}
+local CF = {n=CFrame.new, a=CFrame.Angles}
+local IT = {n=Instance.new}
+
+local motors_anim_table = {}
+
+local C0s = {
+    ['Right Shoulder'] = CF.n(1.5,.5,0),
+    ['Left Shoulder']  = CF.n(-1.5,.5,0),
+    ['Right Hip']      = CF.n(.5,-1,0),
+    ['Left Hip']       = CF.n(-.5,-1,0),
+    ['Neck']           = CF.n(0,1.5,0),
+    ['RootJoint']      = CF.n(0,0,0)
+}
+
+local C1s = {
+    ['Right Shoulder'] = CF.n(0,.5,0),
+    ['Left Shoulder']  = CF.n(0,.5,0),
+    ['Right Hip']      = CF.n(0,1,0),
+    ['Left Hip']       = CF.n(0,1,0),
+    ['Neck']           = CF.n(0,0,0),
+    ['RootJoint']      = CF.n(0,0,0)
+}
+
+if _G.anim_template_loop_running then
+    _G.anim_template_loop_running = false
+
+    if camera:FindFirstChild('music_player') then
+        camera.music_player:Destroy()
+    end
+
+    Wait()
+end
+
+for _,v in pairs(char:GetDescendants()) do -- [[finds any motors6, copies them and if it finds it within C0 sets that value, otherwise just copies it]]
+   if v:IsA('Motor6D') then
+        local thing = v:Clone()
+
+        if C0s[thing.Name] and C1s[thing.Name] then -- very smart. I do this for custom hats i want to animate
+            thing.C0 = C0s[thing.Name]
+            thing.C1 = C1s[thing.Name]
+            thing.Parent = v.Parent
+        end
+        v:Destroy()
+
+    end
+end
+
+local motors = {
+    ['RA'] = tor['Right Shoulder'], --1
+    ['LA'] = tor['Left Shoulder'],  --2
+    ['RL'] = tor['Right Hip'],      --3
+    ['LL'] = tor['Left Hip'],       --4
+    ['HED']= tor['Neck'],           --5
+    ['TOR']= hrp['RootJoint']       --6
+}
+
+workspace.FallenPartsDestroyHeight = 0 / 0
+
+--function start--
+
+local function add_hat_for_anim(naming,handle,part1,c0,c1)
+    if handle:FindFirstChild('AccessoryWeld') then
+        handle.AccessoryWeld:Destroy()
+    end
+
+    local motor = IT.n('Motor6D')
+    motor.Part0 = handle
+    motor.Part1 = part1 
+    motor.C0 = c0
+    motor.C1 = c1
+    motor.Parent = handle
+
+    motors[naming] = motor
+end
+
+local function lerp(part,cf,angles,alpha)
+    if motors[part] then
+        motors[part].Transform = motors[part].Transform:lerp(cf * angles, alpha)
+    end
+end
+
+local function ray_cast(from,direction)
+    return workspace:Raycast(
+        from,direction,
+        raycast_params
+    )
+end
+
+local function do_stuff()
+    local rightvector = (hrp.Velocity*tor.CFrame.rightVector).X + (hrp.Velocity*tor.CFrame.rightVector).Z
+    local lookvector = (hrp.Velocity*tor.CFrame.lookVector).X + (hrp.Velocity*tor.CFrame.lookVector).Z
+
+    if lookvector > hum.WalkSpeed then
+    	lookvector = hum.WalkSpeed
+
+    end
+    if lookvector < -hum.WalkSpeed then
+    	lookvector = -hum.WalkSpeed
+
+    end
+    if rightvector > hum.WalkSpeed then
+    	rightvector = hum.WalkSpeed
+
+    end
+    if rightvector < -hum.WalkSpeed then
+    	rightvector = -hum.WalkSpeed
+
+    end
+
+    lookvel = lookvector / hum.WalkSpeed
+    rightvel = rightvector / hum.WalkSpeed
+    side = (rightvector / (hum.WalkSpeed * 2))
+end
+
+local function cos(speed)
+    return math.cos(sine/speed)
+end
+
+local function sin(speed)
+    return math.sin(sine/speed)
+end
+
+local function get_state()
+    local hrp_velocity = (hrp.Velocity * V3.n(1,0,1)).magnitude
+    local hrp_vel_up = hrp.Velocity.y
+    
+    local hitfloor = ray_cast(
+        hrp.Position,
+        ((CF.n(hrp.Position,hrp.Position - V3.n(0,1,0))).lookVector).unit * 4
+    )
+
+    if hrp_velocity<1 and hitfloor~=nil then
+        return 'idle'
+
+    elseif hrp_velocity>2 and hitfloor~=nil then
+        return 'walking'
+
+    elseif hrp_vel_up >1 and hitfloor == nil then
+        return 'jump' 
+
+    elseif hrp_vel_up <-1 and hitfloor == nil then
+        return 'fall' 
+    end
+end
+
+--function end--
+
+raycast_params = RaycastParams.new()
+raycast_params.FilterDescendantsInstances = {char,workspace[name]}
+raycast_params.FilterType = Enum.RaycastFilterType.Blacklist
+
+local music_player = IT.n('Sound')
+music_player.Name = 'music_player'
+music_player.SoundId = 'rbxassetid://'.. start_id
+music_player.Looped = true
+music_player.Parent = camera
+music_player:Play()
+
+--add_hat_for_anim(naming,handle,part1,c0,c1)
+
+_G.anim_template_loop_running = true
+Wait()
+
+for _,v in pairs(hum:GetPlayingAnimationTracks()) do
+    v:Stop()
+end
+task.wait()
+
+if char:FindFirstChild('Animate') then
+    char.Animate.Disabled = true
+end
+
+sine = 0
+repeat RS:Wait()
+    sine += 1
+    local state = get_state()
+    do_stuff()
+  --[[
+    local function lerp(motor,motorC0,cf,angles,alpha)
+    as caet stated: 
+        cos is for Y(up-down) and is good
+        sin is for X AND Z(right-left front-back)
+    ]]
+    if state == 'idle' then
+        local alpha = .1
+        lerp('HED',CF.n(0,0,0), CF.a(0,0,0), alpha)
+        lerp('TOR',CF.n(0,0,0), CF.a(0,0,0), alpha)
+        lerp('RA', CF.n(0,0,0), CF.a(0,0,0), alpha)
+        lerp('LA', CF.n(0,0,0), CF.a(0,0,0), alpha)
+        lerp('RL', CF.n(0,0,0), CF.a(0,0,0), alpha)
+        lerp('LL', CF.n(0,0,0), CF.a(0,0,0), alpha)
+    elseif state == 'walking' then
+        local alpha = .1
+        lerp('HED',CF.n(0,0,0), CF.a(0,0,0), alpha)
+        lerp('TOR',CF.n(0,0,0), CF.a(0,0,0), alpha)
+        lerp('RA', CF.n(0,0,0), CF.a(0,0,0), alpha)
+        lerp('LA', CF.n(0,0,0), CF.a(0,0,0), alpha)
+        lerp('RL', CF.n(0,0,0), CF.a(0+1*cos(-8.00),0,0), alpha)
+        lerp('LL', CF.n(0,0,0), CF.a(0-1*cos(-8.00),0,0), alpha)
+    end
+until not _G.anim_template_loop_running
+print('fin')
